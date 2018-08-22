@@ -38,7 +38,7 @@ class ExecThread(QThread):
         finally:
             self.finished.emit()
 
-class MyIO(QObject):
+class OutputBuffer(QObject):
     outputWritten = pyqtSignal([str])
     def __init__(self):
         super().__init__()
@@ -56,7 +56,7 @@ class MyConsole(code.InteractiveConsole, QObject):
         self.locals = locals
         self.plainTextWidget = None
         self.output = None
-        self.output = MyIO()
+        self.output = OutputBuffer()
         self.output.outputWritten.connect(self.outputWritten)
         savedHelp = help
         def overridedHelp(*args):
