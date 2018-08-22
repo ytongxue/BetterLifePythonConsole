@@ -8,6 +8,7 @@ import traceback
 from contextlib import redirect_stdout, redirect_stderr
 from datetime import datetime
 import glob
+import pydoc
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QThread, pyqtSignal, QTimer
@@ -57,6 +58,11 @@ class MyConsole(code.InteractiveConsole, QObject):
         self.output = None
         self.output = MyIO()
         self.output.outputWritten.connect(self.outputWritten)
+        savedHelp = help
+        def overridedHelp(*args):
+            if len(args) != 0:
+                savedHelp(*args)
+        self.locals["help"] = overridedHelp
     def push(self, line):
         with redirect_stdout(self.output), redirect_stderr(self.output):
             needMoreLine = super().push(line)
