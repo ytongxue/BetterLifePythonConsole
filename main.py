@@ -74,7 +74,7 @@ class MyConsoleUI(QObject):
         self.timer.start(1)
     def retranslateUi(self, mainWindow):
         _translate = QtCore.QCoreApplication.translate
-        mainWindow.setWindowTitle(_translate("MainWindow", "低级终端"))
+        mainWindow.setWindowTitle(_translate("MainWindow", "Better Life"))
 
     def setConsole(self, console):
         self.console = console
@@ -83,10 +83,11 @@ class MyConsoleUI(QObject):
     def runScript(self):
         if self.consoleWidget.scriptRunning: return
         self.fileDialog = QtWidgets.QFileDialog(self.mainWindow)
+        self.fileDialog.setWindowTitle("Select script to run")
         self.fileDialog.setAcceptMode(QtWidgets.QFileDialog.AcceptOpen)
         self.fileDialog.setFileMode(QtWidgets.QFileDialog.ExistingFile)
         self.fileDialog.setModal(True)
-        self.fileDialog.setNameFilter("Python脚本(*.py)")
+        self.fileDialog.setNameFilter("Python Script(*.py)")
         self.fileDialog.fileSelected.connect(self.onScriptSelected)
         self.fileDialog.open()
     def onScriptSelected(self, scriptPath):
