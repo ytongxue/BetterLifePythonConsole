@@ -26,6 +26,7 @@ from PyQt5.QtCore import QTimer
 from PyQt5.QtCore import pyqtSlot, QObject
 from PyQt5.QtWidgets import QApplication, QMainWindow
 from ConsoleWidget import ConsoleWidget
+from CmdButtonListWidget import CmdButtonListWidget, CmdButtonListWidgetItem
 
 class MyConsoleUI(QObject):
     def __init__(self):
@@ -33,7 +34,7 @@ class MyConsoleUI(QObject):
     def setupUi(self, mainWindow):
         self.mainWindow = mainWindow
         mainWindow.setObjectName("MainWindow")
-        mainWindow.setFixedSize(800, 600)
+        mainWindow.setFixedSize(1200, 600)
         font = QtGui.QFont()
         font.setFamily("DejaVu Sans Mono")
         font.setPointSize(12)
@@ -59,6 +60,11 @@ class MyConsoleUI(QObject):
         self.statusbar.setObjectName("statusbar")
         mainWindow.setStatusBar(self.statusbar)
 
+        self.cmdButtonListWidget = CmdButtonListWidget(mainWindow)
+        self.cmdButtonListWidget.setGeometry(QtCore.QRect(820, 100, 350, 480))
+        self.cmdButtonListWidget.itemDoubleClicked.connect(self.onCmdButtonClicked)
+        self.loadCmdButtons()
+
         self.retranslateUi(mainWindow)
         QtCore.QMetaObject.connectSlotsByName(mainWindow)
         printToShell("ready")
@@ -66,6 +72,28 @@ class MyConsoleUI(QObject):
         self.timer.timeout.connect(self.autorun)
         self.timer.setSingleShot(True)
         self.timer.start(1)
+    def onCmdButtonClicked(self, cmdButtonItem):
+        print(cmdButtonItem)
+        action = cmdButtonItem.action
+        if action:
+            self.consoleWidget.runSourceCode(action)
+    def loadCmdButtons(self):
+        cmds = [
+            {
+                "name": "sayHello",
+                "action": """print("hello")"""
+            },
+            {
+                "name": "sayGoodBye",
+                "action": """print("Good bye")"""
+            },
+        ]
+        for cmd in cmds:
+            cmdButton = CmdButtonListWidgetItem(self.cmdButtonListWidget)
+            cmdButton.name = cmd["name"]
+            cmdButton.action = cmd["action"]
+            self.cmdButtonListWidget.addItem(cmdButton)
+
     def retranslateUi(self, mainWindow):
         _translate = QtCore.QCoreApplication.translate
         mainWindow.setWindowTitle(_translate("MainWindow", "Better Life"))

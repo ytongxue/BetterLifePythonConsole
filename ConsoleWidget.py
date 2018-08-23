@@ -92,6 +92,7 @@ Hello World! Welcome to my console. Have fun.
         self.scope = scope
         self.console = MyConsole(scope)
         self.console.outputWritten.connect(self.onOutputWritten)
+        self.console.scriptFinished.connect(self.onScriptFinished)
     def getCurrentLine(self):
         """ get content of current line(the line the cursor is at) """
         cursor = self.textCursor()
@@ -224,8 +225,15 @@ Hello World! Welcome to my console. Have fun.
         self.appendPlainText("\n[console] running {}\n\n".format(scriptPath))
         self.scriptRunning = True
         printToShell("runScript:", scriptPath)
-        self.console.scriptFinished.connect(self.onScriptFinished)
         self.console.runScriptSource(open(scriptPath, "r").read())
+    def runSourceCode(self, sourceCode):
+        if self.scriptRunning: return
+        if not sourceCode: return
+        self.setFocus()
+        #self.appendPlainText("\nrun source code:\n")
+        self.appendPlainText(sourceCode)
+        self.appendPlainText("\n")
+        self.console.runScriptSource(sourceCode)
     def onOutputWritten(self, string):
         self.appendPlainText(string)
     def onScriptFinished(self):
