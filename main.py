@@ -17,6 +17,7 @@ import sys
 import os
 import traceback
 import glob
+import json
 from functools import partial
 from util import printToShell
 
@@ -26,7 +27,8 @@ from PyQt5.QtCore import QTimer
 from PyQt5.QtCore import pyqtSlot, QObject
 from PyQt5.QtWidgets import QApplication, QMainWindow
 from ConsoleWidget import ConsoleWidget
-from CmdButtonListWidget import CmdButtonListWidget, CmdButtonListWidgetItem
+from QuickCmdButtonListWidget import QuickCmdButtonListWidget, QuickCmdButtonListWidgetItem
+from QuickCmdEditDialog import QuickCmdEditDialog
 
 class MyConsoleUI(QObject):
     def __init__(self):
@@ -61,28 +63,29 @@ class MyConsoleUI(QObject):
         mainWindow.setStatusBar(self.statusbar)
 
         # right panel
-        self.addCmdButton = QtWidgets.QPushButton(self.mainWindow)
-        self.addCmdButton.setText("Add")
-        self.addCmdButton.setGeometry(QtCore.QRect(820, 50, 85, 35))
-        self.addCmdButton.clicked.connect(partial(self.onCmdListChangeButtonClicked, "add"))
+        self.addQuickCmdButton = QtWidgets.QPushButton(self.mainWindow)
+        self.addQuickCmdButton.setText("Add")
+        self.addQuickCmdButton.setGeometry(QtCore.QRect(820, 50, 85, 35))
+        self.addQuickCmdButton.clicked.connect(partial(self.onQuickCmdListChangeButtonClicked, "add"))
 
-        self.deleteCmdButton = QtWidgets.QPushButton(self.mainWindow)
-        self.deleteCmdButton.setText("Delete")
-        self.deleteCmdButton.setGeometry(QtCore.QRect(925, 50, 85, 35))
-        self.deleteCmdButton.clicked.connect(partial(self.onCmdListChangeButtonClicked, "delete"))
+        self.deleteQuickCmdButton = QtWidgets.QPushButton(self.mainWindow)
+        self.deleteQuickCmdButton.setText("Delete")
+        self.deleteQuickCmdButton.setGeometry(QtCore.QRect(925, 50, 85, 35))
+        self.deleteQuickCmdButton.clicked.connect(partial(self.onQuickCmdListChangeButtonClicked, "delete"))
 
-        self.editCmdButton = QtWidgets.QPushButton(self.mainWindow)
-        self.editCmdButton.setText("Edit")
-        self.editCmdButton.setGeometry(QtCore.QRect(1030, 50, 85, 35))
-        self.editCmdButton.clicked.connect(partial(self.onCmdListChangeButtonClicked, "edit"))
+        self.editQuickCmdButton = QtWidgets.QPushButton(self.mainWindow)
+        self.editQuickCmdButton.setText("Edit")
+        self.editQuickCmdButton.setGeometry(QtCore.QRect(1030, 50, 85, 35))
+        self.editQuickCmdButton.clicked.connect(partial(self.onQuickCmdListChangeButtonClicked, "edit"))
 
-        self.cmdButtonListWidget = CmdButtonListWidget(mainWindow)
-        self.cmdButtonListWidget.setGeometry(QtCore.QRect(820, 100, 350, 480))
-        self.cmdButtonListWidget.itemDoubleClicked.connect(self.onCmdButtonClicked)
-        self.cmdButtonListWidget.focused.connect(self.onCmdListWidgetFocused)
-        self.cmdButtonListWidget.unfocused.connect(self.onCmdListWidgetUnfocused)
-        self.loadCmdButtons()
-        self.onCmdListWidgetUnfocused()
+        self.quickCmdButtonListWidget = QuickCmdButtonListWidget(mainWindow)
+        self.quickCmdButtonListWidget.setGeometry(QtCore.QRect(820, 100, 350, 480))
+        self.quickCmdButtonListWidget.itemDoubleClicked.connect(self.onCmdButtonClicked)
+        self.quickCmdButtonListWidget.focused.connect(self.onQuickCmdListWidgetFocused)
+        self.quickCmdButtonListWidget.unfocused.connect(self.onQuickCmdListWidgetUnfocused)
+        self.loadQuickCmds()
+        self.onQuickCmdListWidgetUnfocused()
+        self.quickCmdButtonListWidget.reordered.connect(self.onQuickCmdListReordered)
 
         self.retranslateUi(mainWindow)
         QtCore.QMetaObject.connectSlotsByName(mainWindow)
@@ -91,38 +94,107 @@ class MyConsoleUI(QObject):
         self.timer.timeout.connect(self.autorun)
         self.timer.setSingleShot(True)
         self.timer.start(1)
-    def onCmdListWidgetFocused(self):
-        self.addCmdButton.setEnabled(True)
-        self.deleteCmdButton.setEnabled(True)
-        self.editCmdButton.setEnabled(True)
-    def onCmdListWidgetUnfocused(self):
-        self.addCmdButton.setEnabled(False)
-        self.deleteCmdButton.setEnabled(False)
-        self.editCmdButton.setEnabled(False)
-    def onCmdListChangeButtonClicked(self, button):
+    def onQuickCmdListWidgetFocused(self):
+        if self.quickCmdButtonListWidget.count() > 0:
+            self.deleteQuickCmdButton.setEnabled(True)
+            self.editQuickCmdButton.setEnabled(True)
+    def onQuickCmdListWidgetUnfocused(self):
+        self.deleteQuickCmdButton.setEnabled(False)
+        self.editQuickCmdButton.setEnabled(False)
+    def onQuickCmdListChangeButtonClicked(self, button):
         printToShell("clicked button: ", button)
+        currentItem = self.quickCmdButtonListWidget.currentItem()
+        if button in ("add", "edit"):
+            self.dialog = QuickCmdEditDialog(self.mainWindow)
+            self.dialog.finished.connect(self.onQuickCmdEditDialogFinished)
+            self.dialog.setMode(button)
+            if button == "add":
+                self.dialog.setWindowTitle("Add New Quick Command")
+            elif button == "edit":
+                if not currentItem: return
+                self.dialog.setWindowTitle("Edit Quick Command")
+                self.dialog.setCmdName(currentItem.name)
+                self.dialog.setSourceCode(currentItem.action)
+            self.dialog.open()
+        elif button == "delete":
+            if not currentItem: return
+            self.dialog = QtWidgets.QMessageBox(self.mainWindow)
+            self.dialog.buttonClicked.connect(self.onQuickCmdDeletionConfirmingDialogFinished)
+            self.dialog.setText('Are you sure to delete quick command "{}"?'.format(currentItem.name))
+            self.confirmButtonYes = self.dialog.addButton(QtWidgets.QMessageBox.Yes)
+            self.confirmButtonNo = self.dialog.addButton(QtWidgets.QMessageBox.No)
+            self.dialog.open()
+    def onQuickCmdDeletionConfirmingDialogFinished(self, button):
+        #printToShell(button)
+        if button == self.confirmButtonYes:
+            printToShell("yes")
+            currentRow = self.quickCmdButtonListWidget.currentRow()
+            self.quickCmdButtonListWidget.takeItem(currentRow)
+            self.quickCmdButtonListWidget.refreshItemIndex()
+            if self.quickCmdButtonListWidget.count() == 0: #empty
+                self.onQuickCmdListWidgetUnfocused()
+            self.saveQuickCmds()
+        elif button == self.confirmButtonNo:
+            printToShell("No")
+        else:
+            printToShell("Unknown button", button)
+    def onQuickCmdListReordered(self):
+        self.saveQuickCmds()
+    def onQuickCmdEditDialogFinished(self, mode, name, sourceCode):
+        printToShell("mode: {}, name: {}, source: {}",
+                mode, name, sourceCode)
+        if mode not in ("add", "edit"):
+            printToShell("invalid mode:", mode)
+            return
+        if not name:
+            printToShell("empty name")
+            return
+        if not sourceCode:
+            printToShell("empty source  code")
+            return
+        if mode == "add":
+            cmdButtonItem = QuickCmdButtonListWidgetItem()
+            cmdButtonItem.name = name
+            cmdButtonItem.action = sourceCode
+            self.quickCmdButtonListWidget.addItem(cmdButtonItem)
+        elif mode == "edit":
+            item = self.quickCmdButtonListWidget.currentItem()
+            item.name = name
+            item.action = sourceCode
+            self.quickCmdButtonListWidget.refreshItemIndex()
+        self.saveQuickCmds()
     def onCmdButtonClicked(self, cmdButtonItem):
         printToShell(cmdButtonItem)
         action = cmdButtonItem.action
         if action:
             self.consoleWidget.runSourceCode(action)
-    def loadCmdButtons(self):
-        cmds = [
-            {
-                "name": "sayHello",
-                "action": """print("hello")"""
-            },
-            {
-                "name": "sayGoodBye",
-                "action": """print("Good bye")"""
-            },
-        ]
-        for cmd in cmds:
-            cmdButton = CmdButtonListWidgetItem(self.cmdButtonListWidget)
-            cmdButton.name = cmd["name"]
-            cmdButton.action = cmd["action"]
-            self.cmdButtonListWidget.addItem(cmdButton)
-
+    def loadQuickCmds(self):
+        try:
+            with open("quick_cmds.json", "r") as fCmds:
+                cmds = json.load(fCmds)
+                for cmd in cmds:
+                    cmdButton = QuickCmdButtonListWidgetItem(self.quickCmdButtonListWidget)
+                    cmdButton.name = cmd["name"]
+                    cmdButton.action = cmd["action"]
+                    self.quickCmdButtonListWidget.addItem(cmdButton)
+        except Exception as ex:
+            printToShell(ex)
+            printToShell(traceback.format_exc())
+    def saveQuickCmds(self):
+        try:
+            count = self.quickCmdButtonListWidget.count()
+            cmdList = []
+            for i in range(count):
+                item = self.quickCmdButtonListWidget.item(i)
+                cmd = {}
+                cmd["name"] = item.name
+                cmd["action"] = item.action
+                cmdList.append(cmd)
+            with open("quick_cmds.json", "w") as fCmds:
+                json.dump(cmdList, fCmds)
+        except Exception as ex:
+            printToShell(ex)
+            printToShell(traceback.format_exc())
     def retranslateUi(self, mainWindow):
         _translate = QtCore.QCoreApplication.translate
         mainWindow.setWindowTitle(_translate("MainWindow", "Better Life"))
