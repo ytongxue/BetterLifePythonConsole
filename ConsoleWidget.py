@@ -1,14 +1,8 @@
 #! /usr/bin/python3
-import sys
-import os
 import code
-import io
 import re
 import traceback
 from contextlib import redirect_stdout, redirect_stderr
-from datetime import datetime
-import glob
-import pydoc
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QThread, pyqtSignal, QTimer

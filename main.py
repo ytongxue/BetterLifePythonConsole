@@ -15,21 +15,15 @@ and passing the source code to InterativeConsole, or exec().
 # standard modules
 import sys
 import os
-import code
-import io
-import re
 import traceback
-from contextlib import redirect_stdout, redirect_stderr
-from datetime import datetime
 import glob
 
 from util import printToShell
 
 # PyQt-related
 from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import QThread, pyqtSignal, QTimer
+from PyQt5.QtCore import QTimer
 from PyQt5.QtCore import pyqtSlot, QObject
-from PyQt5.QtGui import QKeyEvent, QKeySequence
 from PyQt5.QtWidgets import QApplication, QMainWindow
 from ConsoleWidget import ConsoleWidget
 
