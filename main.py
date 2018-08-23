@@ -51,7 +51,7 @@ class MyConsoleUI(QObject):
         self.buttonRunScript.setIcon(QtGui.QIcon(os.path.join('icon', 'run_script.png')))
         self.buttonRunScript.setIconSize(QtCore.QSize(40, 40))
         self.buttonRunScript.setGeometry(QtCore.QRect(20, 20, 60, 60))
-        self.buttonRunScript.clicked.connect(self.runScript)
+        self.buttonRunScript.clicked.connect(self.onRunScriptButtonClicked)
         
         self.consoleWidget = ConsoleWidget(self.centralwidget)
         self.consoleWidget.setGeometry(QtCore.QRect(10, 100, 780, 480))
@@ -80,7 +80,7 @@ class MyConsoleUI(QObject):
         self.console = console
         self.consoleWidget.setConsole(console)
 
-    def runScript(self):
+    def onRunScriptButtonClicked(self):
         if self.consoleWidget.scriptRunning: return
         self.fileDialog = QtWidgets.QFileDialog(self.mainWindow)
         self.fileDialog.setWindowTitle("Select script to run")
@@ -94,6 +94,9 @@ class MyConsoleUI(QObject):
         printToShell("script:", scriptPath)
         self.consoleWidget.runScript(scriptPath)
     def autorun(self):
+        """
+        scan the .py file in autorun/ directory and run them one by one
+        """
         printToShell("[autorun]")
         scriptList = glob.glob(os.path.join("autorun", "*.py"))
         printToShell("scriptList:", scriptList)
