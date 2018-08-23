@@ -17,7 +17,7 @@ import sys
 import os
 import traceback
 import glob
-
+from functools import partial
 from util import printToShell
 
 # PyQt-related
@@ -60,10 +60,29 @@ class MyConsoleUI(QObject):
         self.statusbar.setObjectName("statusbar")
         mainWindow.setStatusBar(self.statusbar)
 
+        # right panel
+        self.addCmdButton = QtWidgets.QPushButton(self.mainWindow)
+        self.addCmdButton.setText("Add")
+        self.addCmdButton.setGeometry(QtCore.QRect(820, 50, 85, 35))
+        self.addCmdButton.clicked.connect(partial(self.onCmdListChangeButtonClicked, "add"))
+
+        self.deleteCmdButton = QtWidgets.QPushButton(self.mainWindow)
+        self.deleteCmdButton.setText("Delete")
+        self.deleteCmdButton.setGeometry(QtCore.QRect(925, 50, 85, 35))
+        self.deleteCmdButton.clicked.connect(partial(self.onCmdListChangeButtonClicked, "delete"))
+
+        self.editCmdButton = QtWidgets.QPushButton(self.mainWindow)
+        self.editCmdButton.setText("Edit")
+        self.editCmdButton.setGeometry(QtCore.QRect(1030, 50, 85, 35))
+        self.editCmdButton.clicked.connect(partial(self.onCmdListChangeButtonClicked, "edit"))
+
         self.cmdButtonListWidget = CmdButtonListWidget(mainWindow)
         self.cmdButtonListWidget.setGeometry(QtCore.QRect(820, 100, 350, 480))
         self.cmdButtonListWidget.itemDoubleClicked.connect(self.onCmdButtonClicked)
+        self.cmdButtonListWidget.focused.connect(self.onCmdListWidgetFocused)
+        self.cmdButtonListWidget.unfocused.connect(self.onCmdListWidgetUnfocused)
         self.loadCmdButtons()
+        self.onCmdListWidgetUnfocused()
 
         self.retranslateUi(mainWindow)
         QtCore.QMetaObject.connectSlotsByName(mainWindow)
@@ -72,8 +91,18 @@ class MyConsoleUI(QObject):
         self.timer.timeout.connect(self.autorun)
         self.timer.setSingleShot(True)
         self.timer.start(1)
+    def onCmdListWidgetFocused(self):
+        self.addCmdButton.setEnabled(True)
+        self.deleteCmdButton.setEnabled(True)
+        self.editCmdButton.setEnabled(True)
+    def onCmdListWidgetUnfocused(self):
+        self.addCmdButton.setEnabled(False)
+        self.deleteCmdButton.setEnabled(False)
+        self.editCmdButton.setEnabled(False)
+    def onCmdListChangeButtonClicked(self, button):
+        printToShell("clicked button: ", button)
     def onCmdButtonClicked(self, cmdButtonItem):
-        print(cmdButtonItem)
+        printToShell(cmdButtonItem)
         action = cmdButtonItem.action
         if action:
             self.consoleWidget.runSourceCode(action)

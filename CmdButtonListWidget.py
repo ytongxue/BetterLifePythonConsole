@@ -1,10 +1,15 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QTimer
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, QObject
-
+from util import printToShell
 class CmdButtonListWidgetItem(QtWidgets.QListWidgetItem):
     def __init__(self, *args):
         super().__init__(*args)
+        font = QtGui.QFont()
+        font.setFamily("DejaVu Sans Mono")
+        font.setPointSize(12)
+        self.setFont(font)
+
         self.name = ""
         self.action = ""
     def __repr__(self):
@@ -14,6 +19,8 @@ class CmdButtonListWidgetItem(QtWidgets.QListWidgetItem):
 
 class CmdButtonListWidget(QtWidgets.QListWidget):
     reordered = pyqtSignal()
+    focused = pyqtSignal()
+    unfocused = pyqtSignal()
     def __init__(self, *args):
         super().__init__(*args)
         self.setAcceptDrops(True)
@@ -22,11 +29,19 @@ class CmdButtonListWidget(QtWidgets.QListWidget):
         self.setDropIndicatorShown(True)
         self.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
     def dropEvent(self, event):
-        print("[dropEvent] event", event)
-        print("event source:", event.source())
+        printToShell("[dropEvent] event", event)
+        printToShell("event source:", event.source())
         super().dropEvent(event)
         self.refreshItemIndex()
         self.reordered.emit()
+    def focusInEvent(self, event):
+        #printToShell("focused")
+        super().focusInEvent(event)
+        self.focused.emit()
+    def focusOutEvent(self, event):
+        #printToShell("unfocused")
+        super().focusOutEvent(event)
+        self.unfocused.emit()
     def addItem(self, item):
         if isinstance(item, CmdButtonListWidgetItem):
             item.setText("{}. {}".format(self.count(), item.name))
