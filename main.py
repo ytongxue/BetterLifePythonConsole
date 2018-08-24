@@ -227,8 +227,12 @@ class MyConsoleUI(QObject):
             self.consoleWidget.runScript(script)
         printToShell("scope:", self.consoleWidget.console.locals)
         printToShell("[MyConsoleUI] scope id:", id(self.consoleWidget.console.locals))
+
+def runScript(scriptPath):
+    ui.consoleWidget.runScript(scriptPath)
 scope = {}
 scope["__builtins__"] = globals()["__builtins__"]
+scope["runScript"] = runScript
 
 app = QApplication(sys.argv)
 
