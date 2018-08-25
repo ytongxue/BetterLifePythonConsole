@@ -249,6 +249,10 @@ Hello World! Welcome to my console. Have fun.
             #printToShell("let parent handle this key")
             super().keyPressEvent(keyEvent)
             self.currentLine = self.getCurrentLine()
+    def runScripts(self, scriptPathList):
+        self.scriptPathList = scriptPathList
+        self.scriptListIndex = 0
+        self.runScript(scriptPathList[0])
     def runScript(self, scriptPath):
         if self.scriptRunning: return
         self.setFocus()
@@ -257,7 +261,9 @@ Hello World! Welcome to my console. Have fun.
         printToShell("runScript:", scriptPath)
         self.console.runScriptSource(open(scriptPath, "r").read())
     def runSourceCode(self, sourceCode):
-        if self.scriptRunning: return
+        if self.scriptRunning:
+            printToShell("console is busy")
+            return
         if not sourceCode: return
         self.setFocus()
         #self.appendPlainText("\nrun source code:\n")
@@ -268,5 +274,13 @@ Hello World! Welcome to my console. Have fun.
         self.appendPlainText(string)
     def onConsoleFinished(self, needMoreLine):
         self.scriptRunning = False
+        if self.scriptPathList:
+            if self.scriptListIndex < len(self.scriptPathList) - 1:
+                printToShell("run next script")
+                self.scriptListIndex += 1
+                self.runScript(self.scriptPathList[self.scriptListIndex])
+                return
+            else:
+                self.scriptPathList = None
         # insert promote
         self.insertPromote(needMoreLine, False)

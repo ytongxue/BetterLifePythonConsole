@@ -247,9 +247,15 @@ class MyConsoleUI(QObject):
         """
         printToShell("[autorun]")
         scriptList = glob.glob(os.path.join("autorun", "*.py"))
+        runList = []
         printToShell("scriptList:", scriptList)
         for script in scriptList:
-            self.consoleWidget.runScript(script)
+            scriptFileName = os.path.basename(script)
+            printToShell("scriptFileName:", scriptFileName)
+            if scriptFileName.startswith("S"):
+                printToShell("run")
+                runList.append(script)
+        self.consoleWidget.runScripts(runList)
 
 def runScript(scriptPath):
     ui.consoleWidget.runScript(scriptPath)
