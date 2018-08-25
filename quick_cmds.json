@@ -1,1 +1,1 @@
-[{"name": "a", "action": "print(\"a\")"}, {"name": "sayGoodBye1", "action": "print('Good bye')"}]
+[{"name": "run test", "action": "runScript(\"test.py\")"}, {"name": "a", "action": "print(\"a\")"}, {"name": "sayGoodBye1", "action": "print('Good bye')"}, {"name": "requestUserInput(\"name\")", "action": "name = requestUserInput(\"name\")\nif name:\n    print(\"hello, \", name)"}]

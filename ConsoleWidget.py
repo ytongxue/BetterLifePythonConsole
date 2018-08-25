@@ -3,6 +3,8 @@ import code
 import re
 import traceback
 from contextlib import redirect_stdout, redirect_stderr
+from collections import namedtuple
+import queue
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QThread, pyqtSignal, QTimer
@@ -11,6 +13,7 @@ from PyQt5.QtGui import QKeyEvent, QKeySequence
 
 from util import printToShell
     
+"""
 class ExecThread(QThread):
     finished = pyqtSignal()
     def __init__(self, sourceCode, stdout, stderr):
@@ -31,6 +34,7 @@ class ExecThread(QThread):
             self.stderr.write(traceback.format_exc())
         finally:
             self.finished.emit()
+            """
 
 class OutputBuffer(QObject):
     outputWritten = pyqtSignal([str])
@@ -41,31 +45,57 @@ class OutputBuffer(QObject):
     def flush(self):
         pass #do nothing
 
-class MyConsole(code.InteractiveConsole, QObject):
-    scriptFinished = pyqtSignal()
+class MyConsole(QThread):
+    finished = pyqtSignal([bool]) #need more line(s)
     outputWritten = pyqtSignal([str])
-    def __init__(self, locals=None, filename='<console>'):
-        code.InteractiveConsole.__init__(self, locals, filename)
-        QObject.__init__(self)
-        self.locals = locals
+    Work = namedtuple("Work", "type content")
+    def __init__(self, scope=None, filename='<console>'):
+        super().__init__()
+        self.realConsole = code.InteractiveConsole(scope, filename)
+        self.scope = scope
         self.plainTextWidget = None
         self.output = None
         self.output = OutputBuffer()
         self.output.outputWritten.connect(self.outputWritten)
+        self.workQueue = queue.Queue()
+        self.running = False
         savedHelp = help
         def overridedHelp(*args):
             if len(args) != 0:
                 savedHelp(*args)
-        self.locals["help"] = overridedHelp
+        self.scope["help"] = overridedHelp
+    def start(self):
+        self.running = True
+        super().start()
+    def stop(self):
+        self.running = False
+        super.join()
+    def run(self):
+        while self.running:
+            try:
+                work = self.workQueue.get(timeout=0.1)
+            except queue.Empty as ex:
+                continue
+            if work.type == "line":
+                needMoreLine = self.realConsole.push(work.content)
+                self.finished.emit(needMoreLine)
+            elif work.type == "script":
+                try:
+                    with redirect_stdout(self.output), redirect_stderr(self.output):
+                        exec(work.content, self.scope, self.scope)
+                except Exception as ex:
+                    printToShell("exception happend in exec()")
+                    printToShell(traceback.format_exc())
+                    self.output.write(traceback.format_exc())
+                finally:
+                    self.finished.emit(False)
+            else:
+                printToShell("Unknown work type:", work.type)
+
     def push(self, line):
-        with redirect_stdout(self.output), redirect_stderr(self.output):
-            needMoreLine = super().push(line)
-        return needMoreLine
-    def runScriptSource(self, sourceCode, globals=None, locals=None):
-        self.runScriptThread = ExecThread(sourceCode, self.output, self.output)
-        self.runScriptThread.setScope(self.locals)
-        self.runScriptThread.finished.connect(self.scriptFinished)
-        self.runScriptThread.start()
+        self.workQueue.put(self.Work("line", line))
+    def runScriptSource(self, sourceCode):
+        self.workQueue.put(self.Work("script", sourceCode))
 
 class ConsoleWidget(QtWidgets.QPlainTextEdit):
     welcomeMsg = """
@@ -92,7 +122,8 @@ Hello World! Welcome to my console. Have fun.
         self.scope = scope
         self.console = MyConsole(scope)
         self.console.outputWritten.connect(self.onOutputWritten)
-        self.console.scriptFinished.connect(self.onScriptFinished)
+        self.console.finished.connect(self.onConsoleFinished)
+        self.console.start()
     def getCurrentLine(self):
         """ get content of current line(the line the cursor is at) """
         cursor = self.textCursor()
@@ -108,9 +139,8 @@ Hello World! Welcome to my console. Have fun.
         if line:
             self.histories.insert(0, line)
         self.appendPlainText("\n")
-        needMoreLine = self.console.push(line)
-        # insert promote
-        self.insertPromote(needMoreLine, False)
+        self.scriptRunning = True
+        self.console.push(line)
     def appendPlainText(self, string):
         """
         QPlainTextEdit's original appendPlainText() method appends a new paragraph,
@@ -236,6 +266,7 @@ Hello World! Welcome to my console. Have fun.
         self.console.runScriptSource(sourceCode)
     def onOutputWritten(self, string):
         self.appendPlainText(string)
-    def onScriptFinished(self):
-        self.insertPromote()
+    def onConsoleFinished(self, needMoreLine):
         self.scriptRunning = False
+        # insert promote
+        self.insertPromote(needMoreLine, False)

@@ -20,19 +20,24 @@ import glob
 import json
 from functools import partial
 from util import printToShell
+import threading
 
 # PyQt-related
 from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import QTimer
+from PyQt5.QtCore import QTimer, pyqtSignal
 from PyQt5.QtCore import pyqtSlot, QObject
 from PyQt5.QtWidgets import QApplication, QMainWindow
 from ConsoleWidget import ConsoleWidget
 from QuickCmdButtonListWidget import QuickCmdButtonListWidget, QuickCmdButtonListWidgetItem
 from QuickCmdEditDialog import QuickCmdEditDialog
+from UserInputDialog import UserInputDialog
 
 class MyConsoleUI(QObject):
+    userInputNeeded = pyqtSignal([dict])
     def __init__(self):
         super().__init__()
+        self.requestUserInputDict = None
+        self.userInputNeeded.connect(self.requestUserInput)
     def setupUi(self, mainWindow):
         self.mainWindow = mainWindow
         mainWindow.setObjectName("MainWindow")
@@ -216,6 +221,26 @@ class MyConsoleUI(QObject):
     def onScriptSelected(self, scriptPath):
         printToShell("script:", scriptPath)
         self.consoleWidget.runScript(scriptPath)
+    def requestUserInput(self, configDict):
+        self.requestUserInputDict = configDict
+        hint = configDict["hint"]
+        lock = configDict["lock"]
+        self.requestUserInputDict["lock"].acquire()
+
+        self.dialog = UserInputDialog(self.mainWindow)
+        self.dialog.finished.connect(self.onUserInputDialogFinished)
+        self.dialog.setHint(hint)
+        self.dialog.open()
+
+    def onUserInputDialogFinished(self, result):
+        if not self.requestUserInputDict: return
+        if result == QtWidgets.QDialog.Accepted:
+            self.requestUserInputDict["value"] = self.dialog.userInputValue
+        else:
+            self.requestUserInputDict["value"] = None
+        self.requestUserInputDict["condition"].notify()
+        self.requestUserInputDict["lock"].release()
+        self.requestUserInputDict = None
     def autorun(self):
         """
         scan the .py file in autorun/ directory and run them one by one
@@ -225,14 +250,28 @@ class MyConsoleUI(QObject):
         printToShell("scriptList:", scriptList)
         for script in scriptList:
             self.consoleWidget.runScript(script)
-        printToShell("scope:", self.consoleWidget.console.locals)
-        printToShell("[MyConsoleUI] scope id:", id(self.consoleWidget.console.locals))
 
 def runScript(scriptPath):
     ui.consoleWidget.runScript(scriptPath)
+
+def requestUserInput(hintText):
+    l = []
+    d = {}
+    d["hint"] = hintText
+    d["lock"] = threading.Lock()
+    d["condition"] = threading.Condition(d["lock"])
+    d["value"] = None
+    d["lock"].acquire()
+    ui.userInputNeeded.emit(d)
+    d["condition"].wait()
+    d["lock"].release()
+    printToShell("finished, value:", d["value"])
+    return d["value"]
+
 scope = {}
 scope["__builtins__"] = globals()["__builtins__"]
 scope["runScript"] = runScript
+scope["requestUserInput"] = requestUserInput
 
 app = QApplication(sys.argv)
 
