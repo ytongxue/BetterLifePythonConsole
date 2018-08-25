@@ -10,3 +10,6 @@ def printToShell(*args):
     line = " ".join(map(str, args))
     sys.__stdout__.write(line)
     sys.__stdout__.write("\n")
+
+def redirectPrintToShell(scope):
+    scope["print"] = printToShell

@@ -11,7 +11,8 @@ from PyQt5.QtCore import QThread, pyqtSignal, QTimer
 from PyQt5.QtCore import pyqtSlot, QObject
 from PyQt5.QtGui import QKeyEvent, QKeySequence
 
-from util import printToShell
+import util
+util.redirectPrintToShell(globals())
     
 """
 class ExecThread(QThread):
@@ -29,8 +30,8 @@ class ExecThread(QThread):
             with redirect_stdout(self.stdout), redirect_stderr(self.stderr):
                 exec(self.sourceCode, self.scope, self.scope)
         except Exception as ex:
-            printToShell("exception happend in exec()")
-            printToShell(traceback.format_exc())
+            print("exception happend in exec()")
+            print(traceback.format_exc())
             self.stderr.write(traceback.format_exc())
         finally:
             self.finished.emit()
@@ -84,13 +85,13 @@ class MyConsole(QThread):
                     with redirect_stdout(self.output), redirect_stderr(self.output):
                         exec(work.content, self.scope, self.scope)
                 except Exception as ex:
-                    printToShell("exception happend in exec()")
-                    printToShell(traceback.format_exc())
+                    print("exception happend in exec()")
+                    print(traceback.format_exc())
                     self.output.write(traceback.format_exc())
                 finally:
                     self.finished.emit(False)
             else:
-                printToShell("Unknown work type:", work.type)
+                print("Unknown work type:", work.type)
 
     def push(self, line):
         self.workQueue.put(self.Work("line", line))
@@ -131,11 +132,11 @@ Hello World! Welcome to my console. Have fun.
         line = block.text()[len(self.promote):]
         return line
     def onEnter(self):
-        #printToShell("just got an Enter key")
+        #print("just got an Enter key")
         if not self.console: return
         self.historyIndex = -1
         line = self.getCurrentLine()
-        printToShell('[onEnter] line:"{}"'.format(line))
+        print('[onEnter] line:"{}"'.format(line))
         if line:
             self.histories.insert(0, line)
         self.appendPlainText("\n")
@@ -160,14 +161,14 @@ Hello World! Welcome to my console. Have fun.
         self.appendPlainText(promote)
     def keyPressEvent(self, keyEvent):
         key = keyEvent.key()
-        #printToShell("key: {0} => {0:#x}".format(key))
+        #print("key: {0} => {0:#x}".format(key))
         cursor = self.textCursor()
-        #printToShell("cursor:", cursor.blockNumber(), self.blockCount())
+        #print("cursor:", cursor.blockNumber(), self.blockCount())
         handled = False
         if self.scriptRunning:
             handled = True
         elif cursor.blockNumber() < self.blockCount() - 1: # not on the bottom line
-            #printToShell("cursor not on the bottom line")
+            #print("cursor not on the bottom line")
             handled = True
         elif key == QtCore.Qt.Key_Backspace \
                 and self.textCursor().columnNumber() <= len(self.promote):
@@ -179,7 +180,7 @@ Hello World! Welcome to my console. Have fun.
             if self.histories and self.historyIndex < len(self.histories) - 1:
                 self.historyIndex += 1
                 line = self.histories[self.historyIndex]
-                #printToShell("history: ", line)
+                #print("history: ", line)
                 cursor = self.textCursor()
                 cursor.select(QtGui.QTextCursor.BlockUnderCursor)
                 cursor.removeSelectedText()
@@ -208,7 +209,7 @@ Hello World! Welcome to my console. Have fun.
             m = pattern.search(line)
             if m:
                 part = m.groups()[0]
-                printToShell("part", part)
+                print("part", part)
                 flatDict = {}
                 for symbol in self.scope:
                     flatDict[symbol] = self.scope[symbol]
@@ -217,7 +218,7 @@ Hello World! Welcome to my console. Have fun.
                 candidateList = []
                 for symbol in flatDict:
                     if symbol.startswith(part):
-                        #printToShell("find: ", symbol)
+                        #print("find: ", symbol)
                         candidateList.append(symbol)
                 if len(candidateList) == 1:
                     candidate = candidateList[0]
@@ -240,13 +241,13 @@ Hello World! Welcome to my console. Have fun.
                     self.insertPromote()
                     self.appendPlainText(line)
             else:
-                printToShell("nothing found")
+                print("nothing found")
             handled = True
         if key != QtCore.Qt.Key_Tab:
-            #printToShell("clear tab counter")
+            #print("clear tab counter")
             self.tabCounter = 0
         if not handled:
-            #printToShell("let parent handle this key")
+            #print("let parent handle this key")
             super().keyPressEvent(keyEvent)
             self.currentLine = self.getCurrentLine()
     def runScripts(self, scriptPathList):
@@ -258,11 +259,11 @@ Hello World! Welcome to my console. Have fun.
         self.setFocus()
         self.appendPlainText("\n[console] running {}\n\n".format(scriptPath))
         self.scriptRunning = True
-        printToShell("runScript:", scriptPath)
+        print("runScript:", scriptPath)
         self.console.runScriptSource(open(scriptPath, "r").read())
     def runSourceCode(self, sourceCode):
         if self.scriptRunning:
-            printToShell("console is busy")
+            print("console is busy")
             return
         if not sourceCode: return
         self.setFocus()
@@ -276,7 +277,7 @@ Hello World! Welcome to my console. Have fun.
         self.scriptRunning = False
         if self.scriptPathList:
             if self.scriptListIndex < len(self.scriptPathList) - 1:
-                printToShell("run next script")
+                print("run next script")
                 self.scriptListIndex += 1
                 self.runScript(self.scriptPathList[self.scriptListIndex])
                 return

@@ -1,7 +1,10 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QTimer
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, QObject
-from util import printToShell
+
+import util
+util.redirectPrintToShell(globals())
+
 class QuickCmdButtonListWidgetItem(QtWidgets.QListWidgetItem):
     def __init__(self, *args):
         super().__init__(*args)
@@ -29,17 +32,17 @@ class QuickCmdButtonListWidget(QtWidgets.QListWidget):
         self.setDropIndicatorShown(True)
         self.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
     def dropEvent(self, event):
-        printToShell("[dropEvent] event", event)
-        printToShell("event source:", event.source())
+        print("[dropEvent] event", event)
+        print("event source:", event.source())
         super().dropEvent(event)
         self.refreshItemIndex()
         self.reordered.emit()
     def focusInEvent(self, event):
-        #printToShell("focused")
+        #print("focused")
         super().focusInEvent(event)
         self.focused.emit()
     def focusOutEvent(self, event):
-        #printToShell("unfocused")
+        #print("unfocused")
         super().focusOutEvent(event)
         self.unfocused.emit()
     def addItem(self, item):

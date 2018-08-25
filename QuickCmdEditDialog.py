@@ -1,7 +1,9 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QTimer
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, QObject
-from util import printToShell
+
+import util
+util.redirectPrintToShell(globals())
 
 class QuickCmdEditDialog(QtWidgets.QDialog):
     finished = pyqtSignal([str, str, str])

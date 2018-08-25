@@ -19,7 +19,7 @@ import traceback
 import glob
 import json
 from functools import partial
-from util import printToShell
+import util
 import threading
 
 # PyQt-related
@@ -94,7 +94,7 @@ class MyConsoleUI(QObject):
 
         self.retranslateUi(mainWindow)
         QtCore.QMetaObject.connectSlotsByName(mainWindow)
-        printToShell("ready")
+        print("ready")
         self.timer = QTimer()
         self.timer.timeout.connect(self.autorun)
         self.timer.setSingleShot(True)
@@ -107,7 +107,7 @@ class MyConsoleUI(QObject):
         self.deleteQuickCmdButton.setEnabled(False)
         self.editQuickCmdButton.setEnabled(False)
     def onQuickCmdListChangeButtonClicked(self, button):
-        printToShell("clicked button: ", button)
+        print("clicked button: ", button)
         currentItem = self.quickCmdButtonListWidget.currentItem()
         if button in ("add", "edit"):
             self.dialog = QuickCmdEditDialog(self.mainWindow)
@@ -130,9 +130,9 @@ class MyConsoleUI(QObject):
             self.confirmButtonNo = self.dialog.addButton(QtWidgets.QMessageBox.No)
             self.dialog.open()
     def onQuickCmdDeletionConfirmingDialogFinished(self, button):
-        #printToShell(button)
+        #print(button)
         if button == self.confirmButtonYes:
-            printToShell("yes")
+            print("yes")
             currentRow = self.quickCmdButtonListWidget.currentRow()
             self.quickCmdButtonListWidget.takeItem(currentRow)
             self.quickCmdButtonListWidget.refreshItemIndex()
@@ -140,22 +140,22 @@ class MyConsoleUI(QObject):
                 self.onQuickCmdListWidgetUnfocused()
             self.saveQuickCmds()
         elif button == self.confirmButtonNo:
-            printToShell("No")
+            print("No")
         else:
-            printToShell("Unknown button", button)
+            print("Unknown button", button)
     def onQuickCmdListReordered(self):
         self.saveQuickCmds()
     def onQuickCmdEditDialogFinished(self, mode, name, sourceCode):
-        printToShell("mode: {}, name: {}, source: {}",
+        print("mode: {}, name: {}, source: {}",
                 mode, name, sourceCode)
         if mode not in ("add", "edit"):
-            printToShell("invalid mode:", mode)
+            print("invalid mode:", mode)
             return
         if not name:
-            printToShell("empty name")
+            print("empty name")
             return
         if not sourceCode:
-            printToShell("empty source  code")
+            print("empty source  code")
             return
         if mode == "add":
             cmdButtonItem = QuickCmdButtonListWidgetItem()
@@ -169,7 +169,7 @@ class MyConsoleUI(QObject):
             self.quickCmdButtonListWidget.refreshItemIndex()
         self.saveQuickCmds()
     def onCmdButtonClicked(self, cmdButtonItem):
-        printToShell(cmdButtonItem)
+        print(cmdButtonItem)
         action = cmdButtonItem.action
         if action:
             self.consoleWidget.runSourceCode(action)
@@ -183,8 +183,8 @@ class MyConsoleUI(QObject):
                     cmdButton.action = cmd["action"]
                     self.quickCmdButtonListWidget.addItem(cmdButton)
         except Exception as ex:
-            printToShell(ex)
-            printToShell(traceback.format_exc())
+            print(ex)
+            print(traceback.format_exc())
     def saveQuickCmds(self):
         try:
             count = self.quickCmdButtonListWidget.count()
@@ -198,8 +198,8 @@ class MyConsoleUI(QObject):
             with open("quick_cmds.json", "w") as fCmds:
                 json.dump(cmdList, fCmds)
         except Exception as ex:
-            printToShell(ex)
-            printToShell(traceback.format_exc())
+            print(ex)
+            print(traceback.format_exc())
     def retranslateUi(self, mainWindow):
         _translate = QtCore.QCoreApplication.translate
         mainWindow.setWindowTitle(_translate("MainWindow", "Better Life"))
@@ -219,7 +219,7 @@ class MyConsoleUI(QObject):
         self.fileDialog.fileSelected.connect(self.onScriptSelected)
         self.fileDialog.open()
     def onScriptSelected(self, scriptPath):
-        printToShell("script:", scriptPath)
+        print("script:", scriptPath)
         self.consoleWidget.runScript(scriptPath)
     def requestUserInput(self, configDict):
         self.requestUserInputDict = configDict
@@ -245,15 +245,15 @@ class MyConsoleUI(QObject):
         """
         scan the .py file in autorun/ directory and run them one by one
         """
-        printToShell("[autorun]")
+        print("[autorun]")
         scriptList = glob.glob(os.path.join("autorun", "*.py"))
         runList = []
-        printToShell("scriptList:", scriptList)
+        print("scriptList:", scriptList)
         for script in scriptList:
             scriptFileName = os.path.basename(script)
-            printToShell("scriptFileName:", scriptFileName)
+            print("scriptFileName:", scriptFileName)
             if scriptFileName.startswith("S"):
-                printToShell("run")
+                print("run")
                 runList.append(script)
         self.consoleWidget.runScripts(runList)
 
@@ -271,8 +271,11 @@ def requestUserInput(hintText):
     ui.userInputNeeded.emit(d)
     d["condition"].wait()
     d["lock"].release()
-    printToShell("finished, value:", d["value"])
+    print("finished, value:", d["value"])
     return d["value"]
+
+util.redirectPrintToShell(globals())
+print("print test")
 
 scope = {}
 scope["__builtins__"] = globals()["__builtins__"]
