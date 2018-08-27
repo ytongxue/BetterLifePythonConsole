@@ -13,29 +13,6 @@ from PyQt5.QtGui import QKeyEvent, QKeySequence
 
 import util
 util.redirectPrintToShell(globals())
-    
-"""
-class ExecThread(QThread):
-    finished = pyqtSignal()
-    def __init__(self, sourceCode, stdout, stderr):
-        super().__init__()
-        self.sourceCode = sourceCode
-        self.stdout = stdout
-        self.stderr = stderr
-        self.scope = None
-    def setScope(self, scope):
-        self.scope = scope
-    def run(self):
-        try:
-            with redirect_stdout(self.stdout), redirect_stderr(self.stderr):
-                exec(self.sourceCode, self.scope, self.scope)
-        except Exception as ex:
-            print("exception happend in exec()")
-            print(traceback.format_exc())
-            self.stderr.write(traceback.format_exc())
-        finally:
-            self.finished.emit()
-            """
 
 class OutputBuffer(QObject):
     outputWritten = pyqtSignal([str])
